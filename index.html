@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Population Circles Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.4/proj4.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        #map { height: 100vh; }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script>
+    // Define British National Grid projection
+    var bng = 'PROJCS["OSGB 1936 / British National Grid",GEOGCS["OSGB 1936",DATUM["OSGB_1936",SPHEROID["Airy 1830",6377563.396,299.3249646]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",49],PARAMETER["central_meridian",-2],PARAMETER["scale_factor",0.9996012717],PARAMETER["false_easting",400000],PARAMETER["false_northing",-100000],UNIT["metre",1,AUTHORITY["EPSG","9001"]]]';
+    proj4.defs("EPSG:27700", bng);
+    var bngToWgs84 = proj4("EPSG:27700", "EPSG:4326");
+
+    // Initialize the map
+    var map = L.map('map').setView([51.505, -0.09], 2); // You might need to adjust the initial view
+
+    // Load and display the base map
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Function to add circles to the map using northing and easting
+    function addCircles(data) {
+        data.forEach(function(item) {
+            var easting = item.easting; // Adjust based on your CSV column names
+            var northing = item.northing; // Adjust based on your CSV column names
+            var population = item.population; // Adjust based on your CSV column names
+
+            // Convert northing and easting to lat and lng
+            var latLng = bngToWgs84.forward([easting, northing]);
+
+            // Add circle to the map
+            L.circle(latLng, {
+                color: 'red',
+                fillColor: '#f03',
+                fillOpacity: 0.5,
+                radius: Math.sqrt(population) * 100 // Adjust the radius calculation as needed
+            }).addTo(map);
+        });
+    }
+
+    // Load CSV data and add circles to the map
+    Papa.parse('your-data.csv', {
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        complete: function(results) {
+            addCircles(results.data);
+        }
+    });
+</script>
+</body>
+</html>
