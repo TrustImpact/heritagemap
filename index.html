@@ -5,58 +5,116 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Population Circles Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
+    <link href="https://trst.uk/css/app.css" rel="stylesheet">
+    <link rel="icon" href="data:,">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.4/proj4.js"></script>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://kit.fontawesome.com/19a0336ebe.js" crossorigin="anonymous"></script>
     <style>
+        body {
+            font-family: 'Raleway', sans-serif;
+            background-color: #ffffff;
+        }
+        #header {
+            width: 100%;
+            background-color: #FFFFFF;
+            padding: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        #header img {
+            height: 100px;
+
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        th {
+            background-color: #5D3FD3;
+            color: white;
+        } 
         #map { height: 100vh; }
     </style>
 </head>
 <body>
+    <div id="header">
+        <img src="https://www.trustimpact.com/wp-content/uploads/2020/09/trust-impact-logo.png" alt="Trust Impact Logo">
+        <button id="resetButton" onclick="resetForm()">Reset</button> 
+    </div>
+    <h2>Hertiage Index</h2>
+    <br>
+    <p>Please note this tool uses the postcode long and lat to estimate the straight line distances</p>
+
 
 <div id="map"></div>
 
 <script>
-    // Define British National Grid projection
-    var bng = 'PROJCS["OSGB 1936 / British National Grid",GEOGCS["OSGB 1936",DATUM["OSGB_1936",SPHEROID["Airy 1830",6377563.396,299.3249646]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",49],PARAMETER["central_meridian",-2],PARAMETER["scale_factor",0.9996012717],PARAMETER["false_easting",400000],PARAMETER["false_northing",-100000],UNIT["metre",1,AUTHORITY["EPSG","9001"]]]';
-    proj4.defs("EPSG:27700", bng);
-    var bngToWgs84 = proj4("EPSG:27700", "EPSG:4326");
-
     // Initialize the map
-    var map = L.map('map').setView([51.505, -0.09], 2); // You might need to adjust the initial view
+    var map = L.map('map').setView([53.383331, -1.466667], 9);
 
-    // Load and display the base map
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
-    // Function to add circles to the map using northing and easting
-    function addCircles(data) {
+    var allPoints = []; // Define this outside to collect all latLngs
+
+    // Function to add points to the map using latitude and longitude
+    function addPoints(data) {
         data.forEach(function(item) {
-            var easting = item.easting; // Adjust based on your CSV column names
-            var northing = item.northing; // Adjust based on your CSV column names
-            var population = item.population; // Adjust based on your CSV column names
+            var latitude = parseFloat(item.Latitude); // Make sure to parse the Latitude as a float
+            var longitude = parseFloat(item.Longitude); // Make sure to parse the Longitude as a float
+            var name = item.Name; // Capture the 'Name' field from your CSV data
+            var latLng = [latitude, longitude];
 
-            // Convert northing and easting to lat and lng
-            var latLng = bngToWgs84.forward([easting, northing]);
+            // Add a marker for each data point
+            var marker = L.marker(latLng).addTo(map);
+            
+            // Bind a popup with the 'Name' to the marker
+            marker.bindPopup(name);
 
-            // Add circle to the map
-            L.circle(latLng, {
-                color: 'red',
-                fillColor: '#f03',
-                fillOpacity: 0.5,
-                radius: Math.sqrt(population) * 100 // Adjust the radius calculation as needed
-            }).addTo(map);
+            allPoints.push(latLng); // Collect latLngs for adjusting the view later
         });
+
+        if(allPoints.length > 0) {
+            var latLngBounds = L.latLngBounds(allPoints);
+            map.fitBounds(latLngBounds);
+        }
     }
 
-    // Load CSV data and add circles to the map
+    // Handle map click events
+    map.on('click', function(e) {
+        // Radius of 5 miles in meters (1 mile = 1609.34 meters)
+        var radius = 5 * 1609.34;
+
+        // Create a circle at the clicked position with a radius of 5 miles
+        var circle = L.circle(e.latlng, radius, {
+            color: 'blue',
+            fillColor: '#0f3',
+            fillOpacity: 0.2
+        }).addTo(map);
+
+        // Count points within the circle
+        var count = 0;
+        allPoints.forEach(function(point) {
+            var distance = map.distance(e.latlng, point);
+            if (distance <= radius) {
+                count++;
+            }
+        });
+
+        // Display the count. You can adjust this to display the count in a more user-friendly way
+        alert("Points within 5 miles: " + count);
+    });
+
     Papa.parse('https://raw.githubusercontent.com/TrustImpact/heritagemap/main/parks.csv', {
         download: true,
         header: true,
         dynamicTyping: true,
+        skipEmptyLines: true,
         complete: function(results) {
-            addCircles(results.data);
+            console.log("CSV Data Loaded", results.data);
+            addPoints(results.data); // Now `addPoints` handles everything, including fitting bounds
         }
     });
 </script>
