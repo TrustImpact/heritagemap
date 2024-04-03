@@ -25,7 +25,11 @@
         }
         #header img {
             height: 100px;
-
+        }
+        #pointsTable {
+            width: 80%; /* Or whatever width you prefer */
+            margin-left: auto;
+            margin-right: auto;
         }
         tr:nth-child(even) {
             background-color: #f2f2f2;
@@ -40,7 +44,6 @@
 <body>
     <div id="header">
         <img src="https://www.trustimpact.com/wp-content/uploads/2020/09/trust-impact-logo.png" alt="Trust Impact Logo">
-        <button id="resetButton" onclick="resetForm()">Reset</button> 
     </div>
     <h2>Hertiage Index</h2>
     <br>
@@ -55,6 +58,7 @@
         <thead>
             <tr>
                 <th>Name</th>
+                <th>Type</th>
                 <th>NHLE Link</th>
             </tr>
         </thead>
@@ -75,7 +79,7 @@
 
 
     // Initialize the map
-    var map = L.map('map').setView([53.383331, -1.466667], 9);
+    var map = L.map('map').setView([53.383331, -1.466667], 6);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -85,30 +89,30 @@
 
     // Function to add points to the map using latitude and longitude
     function addPoints(data) {
-        data.forEach(function(item) {
-            var latitude = parseFloat(item.Latitude); // Make sure to parse the Latitude as a float
-            var longitude = parseFloat(item.Longitude); // Make sure to parse the Longitude as a float
-            var name = item.Name; // Capture the 'Name' field from your CSV data
+    data.forEach(function(item) {
+        var latitude = parseFloat(item.Latitude);
+        var longitude = parseFloat(item.Longitude);
+
+        // Check if latitude and longitude are valid numbers
+        if (!isNaN(latitude) && !isNaN(longitude)) {
+            var name = item.Name;
             var latLng = [latitude, longitude];
 
-            // Add a circle marker for each data point
+            // Add a circle marker for each valid data point
             var circleMarker = L.circleMarker(latLng, {
-                color: 'Green', // Color of the circle outline
-                fillColor: '#228B22', // Fill color of the circle
-                fillOpacity: 0.25, // Fill opacity of the circle
-                radius: 5 // Radius of the circle marker, in pixels
+                color: 'Green',
+                fillColor: '#228B22',
+                fillOpacity: 0.25,
+                radius: 5
             }).addTo(map);
         
-        // Bind a popup with the 'Name' to the circle marker
-        circleMarker.bindPopup(name);
-
-        allPoints.push(latLng); // Collect latLngs for adjusting the view later
+            circleMarker.bindPopup(name);
+            allPoints.push(latLng);
+        } else {
+            // Optionally, log invalid items for debugging
+            console.error('Invalid LatLng for item:', item);
+        }
     });
-
-    if(allPoints.length > 0) {
-        var latLngBounds = L.latLngBounds(allPoints);
-        map.fitBounds(latLngBounds);
-    }
 }
 
     // Handle map click events
@@ -147,14 +151,19 @@ function updateTable(data) {
     data.forEach(function(item) {
         var row = tableBody.insertRow();
         var nameCell = row.insertCell(0);
-        var linkCell = row.insertCell(1);
+        var typeCell = row.insertCell(1); // New cell for Type
+        var linkCell = row.insertCell(2); // Adjusted to be the third cell
 
         nameCell.textContent = item.Name;
+        typeCell.textContent = item.Type; // Set the text content for Type cell
 
-        // Ensure that item.NHLELink contains the correct URL
-        // The text 'NHLE Link' will be clickable and lead to the URL in item.NHLELink
-        if(item.NHLELink) { // Check if the NHLELink is not undefined or empty
-            linkCell.innerHTML = `<a href="${item.NHLELink}" target="_blank">NHLE Link</a>`;
+        // Correctly access the 'NHLE link' property using bracket notation
+        var nhleLink = item['NHLE link']; // Note the space in 'NHLE link'
+
+        // Check if the NHLE link is not undefined or empty
+        if(nhleLink) {
+            // Use bracket notation to include the property name exactly as it appears in the CSV
+            linkCell.innerHTML = `<a href="${nhleLink}" target="_blank">Link</a>`;
         } else {
             linkCell.textContent = "No Link Provided"; // Or handle the absence of a link however you prefer
         }
@@ -162,18 +171,29 @@ function updateTable(data) {
 }
 
 
+// Function to parse and add points from a CSV file
+function loadAndAddPointsFromCSV(csvUrl) {
+    Papa.parse(csvUrl, {
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+            console.log("CSV Data Loaded from " + csvUrl, results.data);
+            loadedData = loadedData.concat(results.data); // Append the new data to the existing data
+            addPoints(results.data); // Add the new points to the map
+        }
+    });
+}
 
-    Papa.parse('https://raw.githubusercontent.com/TrustImpact/heritagemap/main/parks.csv', {
-    download: true,
-    header: true,
-    dynamicTyping: true,
-    skipEmptyLines: true,
-    complete: function(results) {
-        console.log("CSV Data Loaded", results.data);
-        loadedData = results.data; // Store the loaded data for later use
-        addPoints(results.data);
-    }
-});
+// Initial CSV file (already in your script)
+loadAndAddPointsFromCSV('https://raw.githubusercontent.com/TrustImpact/heritagemap/main/parks.csv');
+
+// Additional CSV files
+loadAndAddPointsFromCSV('https://raw.githubusercontent.com/TrustImpact/heritagemap/main/WHS.csv');
+loadAndAddPointsFromCSV('https://raw.githubusercontent.com/TrustImpact/heritagemap/main/battlefields.csv');
+loadAndAddPointsFromCSV('https://raw.githubusercontent.com/TrustImpact/heritagemap/main/listedbuildings.csv');
+loadAndAddPointsFromCSV('https://raw.githubusercontent.com/TrustImpact/heritagemap/main/monuments.csv');
 
 </script>
 </body>
