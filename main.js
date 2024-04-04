@@ -128,13 +128,27 @@ function mapClickHandler(e) {
 }
 
 function addPoints(data) {
+    // Example color scheme based on 'Type'
+    var typeColors = {
+        'Monument': 'gold',
+        'Parks & Gardens': 'green',
+        'World Heritage Site': 'blue',
+        'Battlefield': 'orange',
+        'Listed Buillding': 'yellow'
+        // Add more types and colors as needed
+    };
+
     data.forEach(function(item) {
         var latitude = item.Latitude;
         var longitude = item.Longitude;
         var latLng = L.latLng(latitude, longitude);
+
+        // Default color if type is not found in the mapping
+        var color = typeColors[item.Type] || 'grey';
+
         var marker = L.circleMarker(latLng, {
-            color: 'green',
-            fillColor: '#228B22',
+            color: color,
+            fillColor: color,
             fillOpacity: 0.5,
             radius: 5
         }).addTo(map);
@@ -157,7 +171,7 @@ function drawCircleAndUpdateData(latlng) {
         fillOpacity: 0.1
     }).addTo(map);
 
-    map.setView(latlng, 10); // Adjust zoom level as necessary
+    map.setView(latlng, 9); // Adjust zoom level as necessary
     filterPointsWithinCircle(); // This now properly filters and updates UI only if a circle is drawn
 }
 
