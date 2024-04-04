@@ -171,7 +171,7 @@ function drawCircleAndUpdateData(latlng) {
         fillOpacity: 0.1
     }).addTo(map);
 
-    map.setView(latlng, 5); // Adjust zoom level as necessary
+    map.setView(latlng, 2); // Adjust zoom level as necessary
     filterPointsWithinCircle(); // This now properly filters and updates UI only if a circle is drawn
 }
 
