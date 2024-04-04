@@ -3,315 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Population Circles Map</title>
+    <title>Heritage Index</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
     <link href="https://trst.uk/css/app.css" rel="stylesheet">
+    <link rel="stylesheet" href="main.css"> <!-- Separate CSS file for styles -->
     <link rel="icon" href="data:,">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.7.4/proj4.js"></script>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <script src="https://kit.fontawesome.com/19a0336ebe.js" crossorigin="anonymous"></script>
-    <style>
-        body {
-            font-family: 'Raleway', sans-serif;
-            background-color: #ffffff;
-        }
-        #header {
-            width: 100%;
-            background-color: #FFFFFF;
-            padding: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        #header img {
-            height: 100px;
-        }
-        #pointsTable {
-            width: 80%; /* Or whatever width you prefer */
-            margin-left: auto;
-            margin-right: auto;
-        }
-        tr:nth-child(even) {
-            background-color: #f2f2f2;
-        }
-        th {
-            background-color: #5D3FD3;
-            color: white;
-        } 
-        #map {
-        height: 60vh;
-        width: calc(100% - 240px); /* Example: Adjust based on your layout */
-        float: left;
-        margin-bottom: 20px; /* Adjust this value to create more or less space */
-        }
-        #inputContainer {
-        display: flex;
-        justify-content: flex-end;
-        padding: 20px; /* Adjust as necessary */
-        gap: 20px; /* Creates space between the input groups */
-        }
-
-        #radiusInputContainer, #postcodeSearchContainer {
-            display: flex;
-            flex-direction: column; /* Stack label and input vertically */
-            align-items: flex-start; /* Aligns items to the start, making it neater */
-        }
-        #toolInstructionsAndInputs {
-            display: flex;
-            justify-content: space-between; /* This separates the text and the inputs */
-            align-items: center; /* This vertically centers them if they're of different heights */
-            flex-wrap: wrap; /* This allows them to wrap onto a new line on smaller screens */
-        }
-
-        #instructionsText {
-            flex-basis: 50%; /* Adjust based on your needs */
-            /* You might want to add some padding or margin for spacing */
-        }
-
-        #inputsContainer {
-            flex-basis: 40%; /* Adjust based on your needs */
-            display: flex;
-            justify-content: space-between; /* Adjust if you have multiple inputs */
-            /* You might want to add some padding or margin for spacing */
-        }
-
-    </style>
 </head>
 <body>
     <div id="header">
         <img src="https://www.trustimpact.com/wp-content/uploads/2020/09/trust-impact-logo.png" alt="Trust Impact Logo">
     </div>
-    <h2>Hertiage Index</h2>
-    <br>
-
-<div id="toolInstructionsAndInputs">
-    <p id="instructionsText">To use this tool, you can either enter a postcode or click directly on the map to produce a profile of the sites of significant heritage close to that location. This tool uses the Open Data from Historic England's April 2024 submission (https://historicengland.org.uk/listing/the-list/data-downloads/) </p>
-
-    <div id="inputContainer" style="display: flex; justify-content: flex-end; padding: 20px;">
-        <div id="radiusInputContainer">
-            <label for="radiusInput">Radius in Miles:</label>
-            <input type="number" id="radiusInput" value="5" min="1" step="any">
-        </div>
-
-        <br>
-
-    <div id="postcodeSearchContainer">
-            <label for="postcodeInput">Postcode:</label>
-            <input type="text" id="postcodeInput" placeholder="Enter postcode">
-            <button id="postcodeSearchButton">Go</button>
+    <h2>Heritage Index</h2>
+    <div id="toolInstructionsAndInputs">
+        <p id="instructionsText">To use this tool, you can either enter a postcode or click directly on the map to produce a profile of the sites of significant heritage close to that location. This tool uses the Open Data from Historic England's April 2024 submission (https://historicengland.org.uk/listing/the-list/data-downloads/)</p>
+        <div id="inputContainer">
+            <div id="radiusInputContainer">
+                <label for="radiusInput">Radius in Miles:</label>
+                <input type="number" id="radiusInput" value="5" min="1" step="any" aria-label="Search radius in miles">
+            </div>
+            <div id="postcodeSearchContainer">
+                <label for="postcodeInput">Postcode:</label>
+                <input type="text" id="postcodeInput" placeholder="Enter postcode" aria-label="Postcode search field">
+                <button id="postcodeSearchButton" aria-label="Search by postcode">Go</button>
+            </div>
         </div>
     </div>
-</div>
-
-<div id="map"></div>
-
-<br>
-
-<div id="summaryContainer">
-    <h3>Summary of Data Points</h3>
-    <ul id="summaryList">
-        <!-- Summary items will be dynamically inserted here -->
-    </ul>
-</div>
-</div>
-<br>
-
-<div id="tableContainer">
-    <table id="pointsTable">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th>NHLE Link</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Table rows will be added dynamically with JavaScript -->
-        </tbody>
-    </table>
-</div>
-
-
-<script>
-
-document.getElementById('postcodeSearchButton').addEventListener('click', function() {
-    var postcode = document.getElementById('postcodeInput').value;
-    var apiKey = '0fa315c939ca4836b78520deac87bdae';
-    var apiURL = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(postcode)}&key=${apiKey}`;
-
-    fetch(apiURL)
-        .then(response => response.json())
-        .then(data => {
-            if (data && data.results && data.results.length > 0) {
-                var lat = data.results[0].geometry.lat;
-                var lng = data.results[0].geometry.lng;
-                drawCircleAndUpdateData([lat, lng]);
-            } else {
-                alert("Could not find the location for that postcode.");
-            }
-        })
-        .catch(error => {
-            console.error('Error during geocoding:', error);
-            alert('Failed to geocode postcode.');
-        });
-});
-    
-    // single circle
-    var currentCircle = null; // This variable will hold the reference to the current circle
-    var allPoints = []; // Define this outside to collect all latLngs
-    var loadedData = []; // This will store the data loaded from the CSV
-
-
-    // Initialize the map
-    var map = L.map('map').setView([53.383331, -1.466667], 6);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
-
-    var allPoints = []; // Define this outside to collect all latLngs
-
-    // Function to add points to the map using latitude and longitude
-    function addPoints(data) {
-    data.forEach(function(item) {
-        var latitude = parseFloat(item.Latitude);
-        var longitude = parseFloat(item.Longitude);
-
-        // Check if latitude and longitude are valid numbers
-        if (!isNaN(latitude) && !isNaN(longitude)) {
-            var name = item.Name;
-            var latLng = [latitude, longitude];
-
-            // Add a circle marker for each valid data point
-            var circleMarker = L.circleMarker(latLng, {
-                color: 'Green',
-                fillColor: '#228B22',
-                fillOpacity: 0.25,
-                radius: 5
-            }).addTo(map);
-        
-            circleMarker.bindPopup(name);
-            allPoints.push(latLng);
-        } else {
-            // Optionally, log invalid items for debugging
-            console.error('Invalid LatLng for item:', item);
-        }
-    });
-}
-function drawCircleAndUpdateData(latlng) {
-    var inputRadius = document.getElementById('radiusInput').value;
-    var radius = inputRadius * 1609.34; // Convert miles to meters
-
-    // If there's already a circle, remove it
-    if (currentCircle) {
-        map.removeLayer(currentCircle);
-    }
-
-    // Create a new circle and add it to the map
-    currentCircle = L.circle(latlng, radius, {
-        color: 'blue',
-        fillColor: '#f03',
-        fillOpacity: 0.1
-    }).addTo(map);
-
-    var pointsWithinCircle = [];
-
-    // Calculate which points are within the circle
-    allPoints.forEach(function(point, index) {
-        var distance = map.distance(latlng, point);
-        if (distance <= radius) {
-            pointsWithinCircle.push(loadedData[index]);
-        }
-    });
-
-    // Update the table and summary as before
-    updateTable(pointsWithinCircle);
-    updateSummary(pointsWithinCircle);
-}
-
-
-    // Handle map click events
-    map.on('click', function(e) {
-    drawCircleAndUpdateData(e.latlng);
-});
-
-
-function updateTable(data) {
-    var tableBody = document.getElementById('pointsTable').getElementsByTagName('tbody')[0];
-    tableBody.innerHTML = ""; // Clear existing table rows
-
-    data.forEach(function(item) {
-        var row = tableBody.insertRow();
-        var nameCell = row.insertCell(0);
-        var typeCell = row.insertCell(1); // New cell for Type
-        var linkCell = row.insertCell(2); // Adjusted to be the third cell
-
-        nameCell.textContent = item.Name;
-        typeCell.textContent = item.Type; // Set the text content for Type cell
-
-        // Correctly access the 'NHLE link' property using bracket notation
-        var nhleLink = item['NHLE link']; // Note the space in 'NHLE link'
-
-        // Check if the NHLE link is not undefined or empty
-        if(nhleLink) {
-            // Use bracket notation to include the property name exactly as it appears in the CSV
-            linkCell.innerHTML = `<a href="${nhleLink}" target="_blank">Link</a>`;
-        } else {
-            linkCell.textContent = "No Link Provided"; // Or handle the absence of a link however you prefer
-        }
-    });
-}
-
-function updateSummary(data) {
-    var summary = {}; // Object to hold the count of each type
-
-    // Calculate the sum of each type
-    data.forEach(function(item) {
-        var type = item.Type;
-        if (summary[type]) {
-            summary[type] += 1;
-        } else {
-            summary[type] = 1;
-        }
-    });
-
-    // Clear the previous summary
-    var summaryList = document.getElementById("summaryList");
-    summaryList.innerHTML = "";
-
-    // Add the new summary items
-    for (var type in summary) {
-        var li = document.createElement("li");
-        li.textContent = `${type}: ${summary[type]}`;
-        summaryList.appendChild(li);
-    }
-}
-
-
-// Function to parse and add points from a CSV file
-function loadAndAddPointsFromCSV(csvUrl) {
-    Papa.parse(csvUrl, {
-        download: true,
-        header: true,
-        dynamicTyping: true,
-        skipEmptyLines: true,
-        complete: function(results) {
-            console.log("CSV Data Loaded from " + csvUrl, results.data);
-            loadedData = loadedData.concat(results.data); // Append the new data to the existing data
-            addPoints(results.data); // Add the new points to the map
-        }
-    });
-}
-
-// Initial CSV file (already in your script)
-loadAndAddPointsFromCSV('https://raw.githubusercontent.com/TrustImpact/heritagemap/main/parks.csv');
-
-// Additional CSV files
-loadAndAddPointsFromCSV('https://raw.githubusercontent.com/TrustImpact/heritagemap/main/WHS.csv');
-loadAndAddPointsFromCSV('https://raw.githubusercontent.com/TrustImpact/heritagemap/main/battlefields.csv');
-loadAndAddPointsFromCSV('https://raw.githubusercontent.com/TrustImpact/heritagemap/main/listedbuildings.csv');
-loadAndAddPointsFromCSV('https://raw.githubusercontent.com/TrustImpact/heritagemap/main/monuments.csv');
-
-</script>
+    <div id="dataOptions">
+        <!-- Accessible labels and checkbox group association with map -->
+        <fieldset>
+            <legend>Map Data Options</legend>
+            <label><input type="checkbox" id="loadmonuments" /> Monuments</label>
+            <label><input type="checkbox" id="loadParks" /> Parks</label>
+            <label><input type="checkbox" id="loadWHS" /> World Heritage Sites</label>
+            <label><input type="checkbox" id="loadBattlefields" /> Battlefields</label>
+            <label><input type="checkbox" id="loadListedBuildings" /> Listed Buildings</label>
+        </fieldset>
+    </div>
+    <div id="map"></div>
+    <div id="summaryContainer">
+        <h3>Summary of Data Points</h3>
+        <ul id="summaryList">
+            <!-- Summary items will be dynamically inserted here -->
+        </ul>
+    </div>
+    <div id="tableContainer">
+        <!-- Responsive table -->
+        <table id="pointsTable">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>NHLE Link</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Table rows will be added dynamically with JavaScript -->
+            </tbody>
+        </table>
+    </div>
+    <script src="main.js"></script> <!-- Separate JS file for scripts -->
 </body>
 </html>
