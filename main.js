@@ -1,0 +1,161 @@
+// Global variables
+var map;
+var currentCircle = null;
+var allPoints = [];
+var loadedData = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeMap();
+    addEventListeners();
+});
+
+function initializeMap() {
+    map = L.map('map').setView([53.383331, -1.466667], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data © OpenStreetMap contributors'
+    }).addTo(map);
+}
+
+function addEventListeners() {
+    var checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', function(event) {
+            var datasetName = event.target.id.substring(4).toLowerCase();
+            loadDataset(datasetName, event.target.checked);
+        });
+    });
+
+    document.getElementById('postcodeSearchButton').addEventListener('click', postcodeSearch);
+    map.on('click', mapClickHandler);
+}
+
+function loadDataset(dataset, isChecked) {
+    if (isChecked) {
+        var datasetUrl = `data/${dataset}.csv`;
+        Papa.parse(datasetUrl, {
+            download: true,
+            header: true,
+            dynamicTyping: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                loadedData = [...loadedData, ...results.data];
+                addPoints(results.data);
+                updateTable();
+                updateSummary();
+            }
+        });
+    } else {
+        loadedData = loadedData.filter(function(data) {
+            return data.Type.toLowerCase() !== dataset;
+        });
+        updateMap();
+        updateTable();
+        updateSummary();
+    }
+}
+
+function postcodeSearch() {
+    var postcode = document.getElementById('postcodeInput').value;
+    var apiKey = '0fa315c939ca4836b78520deac87bdae';
+    var apiURL = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(postcode)}&key=${apiKey}`;
+
+    fetch(apiURL)
+        .then(response => response.json())
+        .then(data => {
+            if (data && data.results && data.results.length > 0) {
+                var latlng = [data.results[0].geometry.lat, data.results[0].geometry.lng];
+                drawCircleAndUpdateData(latlng);
+            } else {
+                alert("Could not find the location for that postcode.");
+            }
+        })
+        .catch(error => {
+            console.error('Error during geocoding:', error);
+            alert('Failed to geocode postcode.');
+        });
+}
+
+function mapClickHandler(e) {
+    drawCircleAndUpdateData(e.latlng);
+}
+
+function addPoints(data) {
+    data.forEach(function(item) {
+        var latitude = item.Latitude;
+        var longitude = item.Longitude;
+        var latLng = L.latLng(latitude, longitude);
+        var marker = L.circleMarker(latLng, {
+            color: 'green',
+            fillColor: '#228B22',
+            fillOpacity: 0.5,
+            radius: 5
+        }).addTo(map);
+        marker.bindPopup(item.Name);
+        allPoints.push(marker);
+    });
+}
+
+function drawCircleAndUpdateData(latlng) {
+    var radius = document.getElementById('radiusInput').value * 1609.34; // miles to meters
+
+    if (currentCircle) {
+        map.removeLayer(currentCircle);
+    }
+
+    currentCircle = L.circle(latlng, {
+        radius: radius,
+        color: 'blue',
+        fillColor: '#f03',
+        fillOpacity: 0.1
+    }).addTo(map);
+
+    map.setView(latlng, 10); // Adjust zoom level as necessary
+    filterPointsWithinCircle();
+}
+
+function filterPointsWithinCircle() {
+    var radius = document.getElementById('radiusInput').value * 1609.34; // miles to meters
+    var pointsWithinCircle = loadedData.filter(function(data) {
+        var pointLatLng = L.latLng(data.Latitude, data.Longitude);
+        return currentCircle.getLatLng().distanceTo(pointLatLng) <= radius;
+    });
+    updateTable(pointsWithinCircle);
+    updateSummary(pointsWithinCircle);
+}
+
+function updateMap() {
+    allPoints.forEach(function(marker) {
+        map.removeLayer(marker);
+    });
+    addPoints(loadedData);
+}
+
+function updateTable(filteredData) {
+    var tableBody = document.getElementById('pointsTable').getElementsByTagName('tbody')[0];
+    tableBody.innerHTML = ''; // Clear existing rows
+    filteredData.forEach(function(item) {
+        var row = tableBody.insertRow();
+        row.insertCell(0).textContent = item.Name;
+        row.insertCell(1).textContent = item.Type;
+        var linkCell = row.insertCell(2);
+        linkCell.innerHTML = item['NHLE link'] ? `<a href="${item['NHLE link']}" target="_blank">Link</a>` : 'No Link';
+    });
+}
+
+function updateSummary(filteredData) {
+    var summary = filteredData.reduce(function(acc, item) {
+        acc[item.Type] = (acc[item.Type] || 0) + 1;
+        return acc;
+    }, {});
+    var summaryList = document.getElementById('summaryList');
+    summaryList.innerHTML = ''; // Clear current summary
+    for (var type in summary) {
+        var li = document.createElement('li');
+        li.textContent = `${type}: ${summary[type]}`;
+        summaryList.appendChild(li);
+    }
+}
+
+function loadInitialData() {
+    // Load any initial datasets here
+}

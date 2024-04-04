@@ -1,0 +1,76 @@
+body {
+    font-family: 'Raleway', sans-serif;
+    background-color: #ffffff;
+}
+
+#header {
+    width: 100%;
+    background-color: #FFFFFF;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+#header img {
+    height: auto;
+    max-height: 100px;
+    width: auto;
+}
+
+#map {
+    height: 80vh; /* Larger map area */
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+#toolInstructionsAndInputs,
+#inputContainer,
+#dataOptions {
+    margin: 20px;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* Improved visibility for the radius circle */
+.circle-radius {
+    color: #007bff;
+    fillColor: '#007bff';
+    fillOpacity: 0.2;
+}
+
+/* Hover effects for buttons */
+button:hover,
+label:hover {
+    cursor: pointer;
+    opacity: 0.85;
+}
+
+/* Responsive table styling */
+#pointsTable {
+    width: 100%;
+    overflow-x: auto;
+}
+
+th {
+    background-color: #5D3FD3;
+    color: white;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+/* Accessibility improvements */
+[aria-label] {
+    cursor: help;
+}
+
+@media screen and (max-width: 768px) {
+    #map {
+        height: 50vh; /* Smaller map area for mobile */
+    }
+    /* Stack inputs vertically on small screens */
+    #inputContainer {
+        flex-direction: column;
+    }
+}
