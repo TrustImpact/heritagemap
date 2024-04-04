@@ -30,27 +30,53 @@ function addEventListeners() {
 }
 
 function loadDataset(dataset, isChecked) {
+    // Define a map of dataset names to their URLs
+    var datasetUrls = {
+        'parks': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/parks.csv',
+        'whs': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/WHS.csv',
+        'battlefields': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/battlefields.csv',
+        'listedbuildings': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/listedbuildings.csv',
+        'monuments': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/monuments.csv'
+    };
+
     if (isChecked) {
-        var datasetUrl = `data/${dataset}.csv`;
-        Papa.parse(datasetUrl, {
-            download: true,
-            header: true,
-            dynamicTyping: true,
-            skipEmptyLines: true,
-            complete: function(results) {
-                loadedData = [...loadedData, ...results.data];
-                addPoints(results.data);
-                updateTable();
-                updateSummary();
-            }
-        });
+        // Use the dataset parameter to get the correct URL
+        var datasetUrl = datasetUrls[dataset];
+        
+        // Continue if we have a URL
+        if (datasetUrl) {
+            Papa.parse(datasetUrl, {
+                download: true,
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    // Merge the new data with any existing data
+                    loadedData = [...loadedData, ...results.data];
+                    // Add the new points to the map
+                    addPoints(results.data);
+                    // Update the table and summary with the new data
+                    updateTable(loadedData);
+                    updateSummary(loadedData);
+                },
+                error: function(err) {
+                    console.error("Error loading data:", err);
+                    alert(`Failed to load dataset for ${dataset}. Please check the URL or try again later.`);
+                }
+            });
+        } else {
+            console.error("No URL found for dataset:", dataset);
+            alert(`No URL is configured for the dataset ${dataset}.`);
+        }
     } else {
+        // If unchecked, remove those points from the map and loadedData
         loadedData = loadedData.filter(function(data) {
             return data.Type.toLowerCase() !== dataset;
         });
+        // Refresh the map markers, table, and summary to reflect the changes
         updateMap();
-        updateTable();
-        updateSummary();
+        updateTable(loadedData);
+        updateSummary(loadedData);
     }
 }
 
