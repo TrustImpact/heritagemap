@@ -49,8 +49,8 @@ async function loadCSVFile(fileName) {
                 complete: function(results) {
                     loadedData = [...loadedData, ...results.data];
                     addPoints(results.data);
-                    updateTable(loadedData);
-                    updateSummary(loadedData);
+                    //updateTable(loadedData);
+                    //updateSummary(loadedData);
                     resolve();
                 },
                 error: function(err) {
@@ -158,12 +158,12 @@ function drawCircleAndUpdateData(latlng) {
     }).addTo(map);
 
     map.setView(latlng, 10); // Adjust zoom level as necessary
-    filterPointsWithinCircle(); // This will update the table and summary based on the circle
+    filterPointsWithinCircle(); // This now properly filters and updates UI only if a circle is drawn
 }
 
 function filterPointsWithinCircle() {
     if (!currentCircle) {
-        return; // Don't update the UI if there's no circle
+        return; // Do not update the UI if there's no circle
     }
     var pointsWithinCircle = loadedData.filter(function(data) {
         var pointLatLng = L.latLng(data.Latitude, data.Longitude);
@@ -172,7 +172,6 @@ function filterPointsWithinCircle() {
     updateTable(pointsWithinCircle);
     updateSummary(pointsWithinCircle);
 }
-
 
 function updateMap() {
     allPoints.forEach(function(marker) {
