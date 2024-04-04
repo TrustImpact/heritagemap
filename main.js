@@ -31,7 +31,7 @@ function addEventListeners() {
 
 async function loadListedBuildingsSequentially() {
     const fileBaseName = 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/listedbuildings';
-    for (let i = 1; i <= 6; i++) {
+    for (let i = 1; i <= 12; i++) {
         const fileName = `${fileBaseName}${i}.csv`;
         console.log(`Loading ${fileName}`);
         await loadCSVFile(fileName);
