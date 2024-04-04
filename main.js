@@ -29,44 +29,66 @@ function addEventListeners() {
     map.on('click', mapClickHandler);
 }
 
+async function loadListedBuildingsSequentially() {
+    const fileBaseName = 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/listedbuildings';
+    for (let i = 1; i <= 6; i++) {
+        const fileName = `${fileBaseName}${i}.csv`;
+        console.log(`Loading ${fileName}`);
+        await loadCSVFile(fileName);
+    }
+}
+
+async function loadCSVFile(fileName) {
+    try {
+        await new Promise((resolve, reject) => {
+            Papa.parse(fileName, {
+                download: true,
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    loadedData = [...loadedData, ...results.data];
+                    addPoints(results.data);
+                    updateTable(loadedData);
+                    updateSummary(loadedData);
+                    resolve();
+                },
+                error: function(err) {
+                    console.error("Error loading data:", err);
+                    reject(err);
+                }
+            });
+        });
+    } catch (error) {
+        console.error(`Failed to load file ${fileName}:`, error);
+        alert(`Failed to load file ${fileName}. Please check the URL or try again later.`);
+    }
+}
+
 function loadDataset(dataset, isChecked) {
     // Define a map of dataset names to their URLs
     var datasetUrls = {
         'parks': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/parks.csv',
         'whs': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/WHS.csv',
         'battlefields': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/battlefields.csv',
-        'listedbuildings': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/listedbuildings.csv',
+        // Note: The listed buildings dataset URL is handled separately
         'monuments': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/monuments.csv'
     };
 
     if (isChecked) {
-        // Use the dataset parameter to get the correct URL
-        var datasetUrl = datasetUrls[dataset];
-        
-        // Continue if we have a URL
-        if (datasetUrl) {
-            Papa.parse(datasetUrl, {
-                download: true,
-                header: true,
-                dynamicTyping: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    // Merge the new data with any existing data
-                    loadedData = [...loadedData, ...results.data];
-                    // Add the new points to the map
-                    addPoints(results.data);
-                    // Update the table and summary with the new data
-                    updateTable(loadedData);
-                    updateSummary(loadedData);
-                },
-                error: function(err) {
-                    console.error("Error loading data:", err);
-                    alert(`Failed to load dataset for ${dataset}. Please check the URL or try again later.`);
-                }
-            });
+        if (dataset === 'listedbuildings') {
+            // Sequential loading for listed buildings
+            loadListedBuildingsSequentially();
         } else {
-            console.error("No URL found for dataset:", dataset);
-            alert(`No URL is configured for the dataset ${dataset}.`);
+            // Use the dataset parameter to get the correct URL for other datasets
+            var datasetUrl = datasetUrls[dataset];
+            if (datasetUrl) {
+                // Load other datasets as before
+                loadCSVFile(datasetUrl);
+            } else {
+                console.error("No URL found for dataset:", dataset);
+                alert(`No URL is configured for the dataset ${dataset}.`);
+            }
         }
     } else {
         // If unchecked, remove those points from the map and loadedData
