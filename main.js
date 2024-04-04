@@ -97,8 +97,8 @@ function loadDataset(dataset, isChecked) {
         });
         // Refresh the map markers, table, and summary to reflect the changes
         updateMap();
-        updateTable(loadedData);
-        updateSummary(loadedData);
+       //updateTable(loadedData);
+        //updateSummary(loadedData);
     }
 }
 
@@ -158,18 +158,21 @@ function drawCircleAndUpdateData(latlng) {
     }).addTo(map);
 
     map.setView(latlng, 10); // Adjust zoom level as necessary
-    filterPointsWithinCircle();
+    filterPointsWithinCircle(); // This will update the table and summary based on the circle
 }
 
 function filterPointsWithinCircle() {
-    var radius = document.getElementById('radiusInput').value * 1609.34; // miles to meters
+    if (!currentCircle) {
+        return; // Don't update the UI if there's no circle
+    }
     var pointsWithinCircle = loadedData.filter(function(data) {
         var pointLatLng = L.latLng(data.Latitude, data.Longitude);
-        return currentCircle.getLatLng().distanceTo(pointLatLng) <= radius;
+        return currentCircle.getLatLng().distanceTo(pointLatLng) <= currentCircle.getRadius();
     });
     updateTable(pointsWithinCircle);
     updateSummary(pointsWithinCircle);
 }
+
 
 function updateMap() {
     allPoints.forEach(function(marker) {
