@@ -81,7 +81,7 @@ function drawCircleAndUpdateData(latlng) {
 
 // New function to load all datasets
 async function loadAllDatasets() {
-    const datasets = ['parks', 'whs', 'battlefields', 'monuments', 'listedbuildings'];
+    const datasets = ['parks', 'whs', 'battlefields', 'monuments', 'listedbuildings','Local_Nature_Reserves_England', 'National_Nature_Reserves_England'];
     for (const dataset of datasets) {
         await loadDataset(dataset);
     }
