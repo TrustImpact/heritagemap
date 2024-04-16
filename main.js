@@ -1,8 +1,8 @@
+// Global variables
 var map;
-var currentCircle = null; // Ensure it is defined as null initially at the global level
+var currentCircle = null;
 var allPoints = [];
 var loadedData = [];
-
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeMap();
@@ -10,39 +10,109 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeMap() {
-    map = L.map('map').setView([53.383331, -1.466667], 6); // Default view
+    map = L.map('map').setView([53.383331, -1.466667], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: 'Map data © OpenStreetMap contributors'
     }).addTo(map);
 }
 
 function addEventListeners() {
+    var checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(function(checkbox) {
+        checkbox.addEventListener('change', function(event) {
+            var datasetName = event.target.id.substring(4).toLowerCase();
+            loadDataset(datasetName, event.target.checked);
+        });
+    });
+
     document.getElementById('postcodeSearchButton').addEventListener('click', postcodeSearch);
+    map.on('click', mapClickHandler);
+}
+
+async function loadListedBuildingsSequentially() {
+    const fileBaseName = 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/listedbuildings';
+    for (let i = 1; i <= 12; i++) {
+        const fileName = `${fileBaseName}${i}.csv`;
+        console.log(`Loading ${fileName}`);
+        await loadCSVFile(fileName);
+    }
+}
+
+async function loadCSVFile(fileName) {
+    try {
+        await new Promise((resolve, reject) => {
+            Papa.parse(fileName, {
+                download: true,
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    loadedData = [...loadedData, ...results.data];
+                    addPoints(results.data);
+                    //updateTable(loadedData);
+                    //updateSummary(loadedData);
+                    resolve();
+                },
+                error: function(err) {
+                    console.error("Error loading data:", err);
+                    reject(err);
+                }
+            });
+        });
+    } catch (error) {
+        console.error(`Failed to load file ${fileName}:`, error);
+        alert(`Failed to load file ${fileName}. Please check the URL or try again later.`);
+    }
+}
+
+function loadDataset(dataset, isChecked) {
+    // Define a map of dataset names to their URLs
+    var datasetUrls = {
+        'parks': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/parks.csv',
+        'whs': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/WHS.csv',
+        'battlefields': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/battlefields.csv',
+        // Note: The listed buildings dataset URL is handled separately
+        'monuments': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/monuments.csv'
+    };
+
+    if (isChecked) {
+        if (dataset === 'listedbuildings') {
+            // Sequential loading for listed buildings
+            loadListedBuildingsSequentially();
+        } else {
+            // Use the dataset parameter to get the correct URL for other datasets
+            var datasetUrl = datasetUrls[dataset];
+            if (datasetUrl) {
+                // Load other datasets as before
+                loadCSVFile(datasetUrl);
+            } else {
+                console.error("No URL found for dataset:", dataset);
+                alert(`No URL is configured for the dataset ${dataset}.`);
+            }
+        }
+    } else {
+        // If unchecked, remove those points from the map and loadedData
+        loadedData = loadedData.filter(function(data) {
+            return data.Type.toLowerCase() !== dataset;
+        });
+        // Refresh the map markers, table, and summary to reflect the changes
+        updateMap();
+       //updateTable(loadedData);
+        //updateSummary(loadedData);
+    }
 }
 
 function postcodeSearch() {
-    var postcode = document.getElementById('postcodeInput').value.trim();
-    if (!postcode) {
-        alert('Please enter a valid postcode.');
-        return;
-    }
-
+    var postcode = document.getElementById('postcodeInput').value;
     var apiKey = '0fa315c939ca4836b78520deac87bdae';
     var apiURL = `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(postcode)}&key=${apiKey}`;
 
     fetch(apiURL)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
-            console.log(data);  // Log the data to see what is being returned
-            if (data.results && data.results.length > 0) {
-                var latLng = [data.results[0].geometry.lat, data.results[0].geometry.lng];
-                map.setView(latLng, 13); // Adjust zoom and center map on postcode location
-                drawCircleAndUpdateData(latLng);
+            if (data && data.results && data.results.length > 0) {
+                var latlng = [data.results[0].geometry.lat, data.results[0].geometry.lng];
+                drawCircleAndUpdateData(latlng);
             } else {
                 alert("Could not find the location for that postcode.");
             }
@@ -53,96 +123,103 @@ function postcodeSearch() {
         });
 }
 
-function drawCircleAndUpdateData(latlng) {
-    var radius = document.getElementById('radiusInput').value * 1609.34; // miles to meters
-
-    // Check and remove the existing circle if it exists
-    if (currentCircle) {
-        map.removeLayer(currentCircle);
-    }
-
-    // Add a new circle to the map
-    currentCircle = L.circle(latlng, {
-        color: 'blue',
-        fillColor: '#f03',
-        fillOpacity: 0.1,
-        radius: radius
-    }).addTo(map);
-
-    // Assuming you want to filter or load data based on this circle
-    filterDataBasedOnLocation(latlng, radius);
+function mapClickHandler(e) {
+    drawCircleAndUpdateData(e.latlng);
 }
 
-function filterDataBasedOnLocation(center, radius) {
-    // Clear any previously loaded data
-    loadedData = [];
-    allPoints.forEach(point => map.removeLayer(point));
-    allPoints = [];
+function addPoints(data) {
+    // Example color scheme based on 'Type'
+    var typeColors = {
+        'Monument': 'gold',
+        'Parks & Gardens': 'green',
+        'World Heritage Site': 'blue',
+        'Battlefield': 'orange',
+        'Listed Buillding': 'yellow'
+        // Add more types and colors as needed
+    };
 
-    // Implement fetching and filtering data for the given radius and center
-    fetchAndDisplayData(center, radius);
-}
+    data.forEach(function(item) {
+        var latitude = item.Latitude;
+        var longitude = item.Longitude;
+        var latLng = L.latLng(latitude, longitude);
 
-function fetchAndDisplayData(center, radius) {
-    // This URL is just a placeholder. Replace it with your actual data fetching URL.
-    const url = `https://api.yourdataendpoint.com/data?lat=${center[0]}&lng=${center[1]}&radius=${radius}`;
+        // Default color if type is not found in the mapping
+        var color = typeColors[item.Type] || 'grey';
 
-    fetch(url)
-        .then(response => {
-            if (!response.ok) { // Check if the response was successful.
-                throw new Error('Network response was not ok: ' + response.statusText);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.error) { // Check if the API returned an error in data.
-                throw new Error('API Error: ' + data.error);
-            }
-            displayDataOnMap(data);
-            updateTable(data);
-            updateSummary(data);
-        })
-        .catch(error => {
-            console.error('Error loading data:', error);
-            alert('Failed to load data: ' + error.message);
-        });
-}
-
-function displayDataOnMap(data) {
-    data.forEach(item => {
-        var marker = L.circleMarker([item.latitude, item.longitude], {
-            color: 'red',
-            fillColor: '#f03',
+        var marker = L.circleMarker(latLng, {
+            color: color,
+            fillColor: color,
             fillOpacity: 0.5,
             radius: 5
-        }).bindPopup(item.name).addTo(map);
+        }).addTo(map);
+        marker.bindPopup(item.Name);
         allPoints.push(marker);
     });
 }
 
-function updateTable(data) {
+function drawCircleAndUpdateData(latlng) {
+    var radius = document.getElementById('radiusInput').value * 1609.34; // miles to meters
+
+    if (currentCircle) {
+        map.removeLayer(currentCircle);
+    }
+
+    currentCircle = L.circle(latlng, {
+        radius: radius,
+        color: 'blue',
+        fillColor: '#f03',
+        fillOpacity: 0.1
+    }).addTo(map);
+
+    map.setView(latlng, 12); // Adjust zoom level as necessary
+    filterPointsWithinCircle(); // This now properly filters and updates UI only if a circle is drawn
+}
+
+function filterPointsWithinCircle() {
+    if (!currentCircle) {
+        return; // Do not update the UI if there's no circle
+    }
+    var pointsWithinCircle = loadedData.filter(function(data) {
+        var pointLatLng = L.latLng(data.Latitude, data.Longitude);
+        return currentCircle.getLatLng().distanceTo(pointLatLng) <= currentCircle.getRadius();
+    });
+    updateTable(pointsWithinCircle);
+    updateSummary(pointsWithinCircle);
+}
+
+function updateMap() {
+    allPoints.forEach(function(marker) {
+        map.removeLayer(marker);
+    });
+    addPoints(loadedData);
+}
+
+function updateTable(filteredData) {
     var tableBody = document.getElementById('pointsTable').getElementsByTagName('tbody')[0];
     tableBody.innerHTML = ''; // Clear existing rows
-    data.forEach(item => {
+    filteredData.forEach(function(item) {
         var row = tableBody.insertRow();
-        row.insertCell(0).textContent = item.name;
-        row.insertCell(1).textContent = item.type;
+        row.insertCell(0).textContent = item.Name;
+        row.insertCell(1).textContent = item.Type;
         var linkCell = row.insertCell(2);
-        linkCell.innerHTML = `<a href="${item.link}" target="_blank">Link</a>`;
+        linkCell.innerHTML = item['NHLE link'] ? `<a href="${item['NHLE link']}" target="_blank">Link</a>` : 'No Link';
     });
 }
 
-function updateSummary(data) {
-    var summaryList = document.getElementById('summaryList');
-    summaryList.innerHTML = ''; // Clear current summary
-    var summary = data.reduce((acc, item) => {
-        acc[item.type] = (acc[item.type] || 0) + 1;
+function updateSummary(filteredData) {
+    var summary = filteredData.reduce(function(acc, item) {
+        acc[item.Type] = (acc[item.Type] || 0) + 1;
         return acc;
     }, {});
-
+    var summaryList = document.getElementById('summaryList');
+    summaryList.innerHTML = ''; // Clear current summary
     for (var type in summary) {
         var li = document.createElement('li');
         li.textContent = `${type}: ${summary[type]}`;
         summaryList.appendChild(li);
     }
+}
+
+function loadInitialData() {
+    // Load any initial datasets here
 }
