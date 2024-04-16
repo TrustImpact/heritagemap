@@ -95,6 +95,9 @@ async function loadDataset(datasetName) {
         'whs': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/WHS.csv',
         'battlefields': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/battlefields.csv',
         'monuments': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/monuments.csv',
+        'Ancient_Woodland_England': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/Ancient_Woodland_England.csv',
+        'Local_Nature_Reserves_England': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/Local_Nature_Reserves_England.csv',
+        'National_Nature_Reserves_England': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/National_Nature_Reserves_England.csv',
         'listedbuildings': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/listedbuildings' // Ensure this is the correct path to your listed buildings dataset
     };
 
@@ -165,7 +168,10 @@ function addPoints(data) {
         'Parks & Gardens': 'green',
         'World Heritage Site': 'blue',
         'Battlefield': 'red',
-        'Listed Building': 'yellow'  // Correct spelling used here
+        'Listed Building': 'yellow',
+        'National Nature Reserve': 'purple',
+        'Local Nature Reserve': 'pink',
+        'Ancient Woodland': 'brown'
     };
 
     allPoints = data.map(function(item) {
