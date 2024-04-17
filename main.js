@@ -81,7 +81,7 @@ function drawCircleAndUpdateData(latlng) {
 
 // New function to load all datasets
 async function loadAllDatasets() {
-    const datasets = ['parks', 'whs', 'battlefields', 'monuments', 'listedbuildings','Local_Nature_Reserves_England', 'National_Nature_Reserves_England'];
+    const datasets = ['parks', 'whs', 'battlefields', 'monuments', 'Ancient Woodland', 'Local_Nature_Reserves_England', 'National_Nature_Reserves_England', 'listedbuildings'];
     for (const dataset of datasets) {
         await loadDataset(dataset);
     }
@@ -95,10 +95,10 @@ async function loadDataset(datasetName) {
         'whs': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/WHS.csv',
         'battlefields': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/battlefields.csv',
         'monuments': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/monuments.csv',
-        'Ancient_Woodland_England': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/Ancient_Woodland_England.csv',
         'Local_Nature_Reserves_England': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/Local_Nature_Reserves_England.csv',
         'National_Nature_Reserves_England': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/National_Nature_Reserves_England.csv',
-        'listedbuildings': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/listedbuildings' // Ensure this is the correct path to your listed buildings dataset
+        'Ancient_Woodland_England': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/Ancient_Woodland_England.csv',
+        'listedbuildings': 'https://raw.githubusercontent.com/TrustImpact/heritagemap/main/listedbuildings'
     };
 
     var datasetUrl = datasetUrls[datasetName];
@@ -164,14 +164,14 @@ function filterPointsWithinCircle() {
 
 function addPoints(data) {
     var typeColors = {
-        'Monument': 'orange',
-        'Parks & Gardens': 'green',
-        'World Heritage Site': 'blue',
-        'Battlefield': 'red',
-        'Listed Building': 'yellow',
-        'National Nature Reserve': 'purple',
-        'Local Nature Reserve': 'pink',
-        'Ancient Woodland': 'brown'
+        'Monument': '3366ff',
+        'Parks & Gardens': '#0033cc',
+        'World Heritage Site': '#000099',
+        'Battlefield': '#99ccff',
+        'Listed Building': '#0000cc',
+        'National Nature Reserve': '#ccffcc',
+        'Local Nature Reserve': '#66cc66',
+        'Ancient Woodland': '#009900'
     };
 
     allPoints = data.map(function(item) {
@@ -190,7 +190,6 @@ function addPoints(data) {
         return marker;
     });
 }
-
 function updateTable(filteredData) {
     var tableBody = document.getElementById('pointsTable').getElementsByTagName('tbody')[0];
     tableBody.innerHTML = ''; // Clear existing rows
